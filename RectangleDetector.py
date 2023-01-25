@@ -35,7 +35,7 @@ class RectangleDetector:
 
         self.isClosedContour    = True
 
-        self.PERCENTAGE_PERIMETER =  0.03 # percentage of perimeter considered for polygon approximation
+        self.PERCENTAGE_PERIMETER =  0.02 # percentage of perimeter considered for polygon approximation
 
         self.old_x_center, self.old_y_center = 0,0
         self.alpha = 0.99 # weight to avoid center point moving too fast
@@ -171,7 +171,11 @@ class RectangleDetector:
                 cv2.putText(imgToDraw, str(ratio)+'-'+str(sides)+'-'+str(area), (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,255,0), 1)
 
                 # drawing contour
-                imgToDraw = cv2.drawContours(imgToDraw, [contour], -1, (0,255,0), 2)                    
+                #imgToDraw = cv2.drawContours(imgToDraw, [contour], -1, (0,255,0), 2)                    
+                rect = cv2.minAreaRect(contour)
+                box = cv2.boxPoints(rect)
+                box = np.int0(box)
+                imgToDraw = cv2.drawContours(imgToDraw,[box],0,(0,255,0),2)
 
                 cv2.circle(imgToDraw, (self.x_center, self.y_center), radius=1, color=(0,0,255), thickness=3)
  
