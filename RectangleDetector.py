@@ -13,8 +13,6 @@ class RectangleDetector:
         self.img = None
         self.x_center, self.y_center, self.center_count = 0, 0 ,0
         self.contours = None
-        self.contour  = None # current contour being used
-        self.area, self.sides, self.ratio, self.approx = None, None, None, None # area, sides, ratio and approximation for current contour
 
         self.MIN_GRAY = 240
         self.MAX_GRAY = 255
@@ -65,12 +63,6 @@ class RectangleDetector:
         return ((sides     >= self.MIN_POLYGON_SIDES   and sides    <= self.MAX_POLYGON_SIDES) 
             and (area      >= self.MIN_AREA            and area     <= self.MAX_AREA)
             and (ratio     >= self.MIN_RATIO           and ratio    <= self.MAX_RATIO))
-
-    def update(self, area, sides, ratio, approx):
-        self.area   = area
-        self.sides  = sides
-        self.ratio  = ratio
-        self.approx = approx
     
     def getAreaSidesRatioApprox(self, contour):
         
@@ -82,10 +74,6 @@ class RectangleDetector:
 
         # calculating number of sides in polygon
         sides = len(approx)
-
-        # calculating ratio between width and height
-        # x, y, w, h = cv2.boundingRect(contour)
-        # ratio = round(float(w)/h,3)
         
         ratio = self.getContourRatio(contour) # always gets W and H in a way the ratio <= 1.0
 
@@ -128,10 +116,6 @@ class RectangleDetector:
         if (len(self.contours) == 0):
             return
 
-        self.boundingRects = []
-        for cnt in self.contours:
-            self.boundingRects.append(cv2.boundingRect(cnt))
-
         # sort by area
         if (self.shouldSortByArea):
             self.contours = sorted(self.contours, key=lambda x: cv2.contourArea(x), reverse=True)
@@ -162,19 +146,19 @@ class RectangleDetector:
                 stopFlag = True
                      
             # squeezing approx
-            self.approx = np.squeeze(self.approx) 
+            approx = np.squeeze(approx) 
             x_sum, y_sum = 0, 0 # initializing x and y coordinates that will be used to calculate center point
             
-            if (len(self.approx) < 4):
+            if (len(approx) < 4):
                 continue
 
-            for corners in self.approx:
+            for corners in approx:
                 x_sum += corners[0]
                 y_sum += corners[1]
             
             # calculating center point
-            x_avg = int(x_sum/self.sides)
-            y_avg = int(y_sum/self.sides)
+            x_avg = int(x_sum/sides)
+            y_avg = int(y_sum/sides)
             
             self.x_center = self.x_center + x_avg
             self.y_center = self.y_center + y_avg
