@@ -48,7 +48,8 @@ while (cap.isOpened()):
         ret, frame = cap.read()
         if not ret:
             cap.release()
-            out.release()
+            if saveResult:
+                out.release()
             break
         
         posx, posy, channel = frame.shape
@@ -76,7 +77,8 @@ while (cap.isOpened()):
         if (cv2.waitKey(waitParam) == ord('q')):
             cv2.destroyAllWindows()
             cap.release()
-            out.release()
+            if saveResult:
+                out.release()
             break
 
     except KeyboardInterrupt:
