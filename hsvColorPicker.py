@@ -2,59 +2,55 @@ import cv2, os, sys
 import numpy as np
 
 
-class Test:
+class HSVColoPicker:
     def __init__(self):        
         
-        self.img_folder = 'frames'
-        self.img_idx    = 0 # to select img
-        self.numImages  = None
+        self.img_folder             = 'frames'
+        self.img_idx                = 0 # to select img
+        self.numImages              = None
 
-        self.imgWindowName      = "img"
-        self.hsvWindowName      = "hsv"
-        self.threshWindowName   = "thresh"
-        self.cannyWindowName    = "canny"
-        self.resultWindowName   = "result"
+        self.imgWindowName          = "img"
+        self.hsvMaskWindowName      = "HSV Mask"
+        self.hsvFilteredWindowName  = "HSV Filtered"
+        self.threshWindowName       = "Thresh with erode"
+        self.cannyWindowName        = "Canny"
+        self.resultWindowName       = "Result"
 
-        self.isSecondMonitor    = False
-        self.xOffset            = 1920
+        self.isSecondMonitor        = False
+        self.xOffset                = 1920
 
-        self.imgWindowPos       = ( 0   + (self.xOffset if self.isSecondMonitor else 0),  0 )
-        self.hsvWindowPos       = (650  + (self.xOffset if self.isSecondMonitor else 0),  0 )
-        self.threshWindowPos    = (1300 + (self.xOffset if self.isSecondMonitor else 0),  0 )
-        self.cannyWindowPos     = ( 0   + (self.xOffset if self.isSecondMonitor else 0), 600)
-        self.resultWindowPos    = (1300  + (self.xOffset if self.isSecondMonitor else 0), 600)
+        # self.imgWindowPos           = ( 0   + (self.xOffset if self.isSecondMonitor else 0),  0 )
+        self.hsvFilteredWindowPos   = ( 0   + (self.xOffset if self.isSecondMonitor else 0),  0 )
+        self.hsvMaskWindowPos       = (650  + (self.xOffset if self.isSecondMonitor else 0),  0 )
+        self.threshWindowPos        = (1300 + (self.xOffset if self.isSecondMonitor else 0),  0 )
+        self.cannyWindowPos         = ( 0   + (self.xOffset if self.isSecondMonitor else 0), 600)
+        self.resultWindowPos        = (1300  + (self.xOffset if self.isSecondMonitor else 0), 600)
         
-        self.filenames      = sorted(os.listdir(self.img_folder))
-        self.numImages      = len(self.filenames)
-        self.img_filename   = None
+        self.filenames              = sorted(os.listdir(self.img_folder))
+        self.numImages              = len(self.filenames)
+        self.img_filename           = None
 
-        self.canny_minVal               = 200
-        self.canny_maxVal               = 200 * 2
+        self.canny_minVal           = 200
+        self.canny_maxVal           = 200 * 2
         
         self.minH, self.minS, self.minV = 30, 0, 177
         self.maxH, self.maxS, self.maxV = 150,92,255
 
         self.x_center, self.y_center, self.center_count = 0, 0 ,0
 
-        self.MIN_GRAY = 0
-        self.MAX_GRAY = 255
-
-        self.MIN_RATIO = 0.65
-        self.MAX_RATIO = 1.15
-
-        self.MIN_AREA = 250     # min observable good area = 400 (from 30m)
-        self.MAX_AREA = 70000   # 55000
-
-        self.MIN_POLYGON_SIDES = 4
-        self.MAX_POLYGON_SIDES = 4
-
-        self.show_only_biggest  = True
-        self.shouldFilter       = True
-        self.shouldSortByArea   = True
-
-        self.isClosedContour    = True
-
-        self.PERCENTAGE_PERIMETER =  0.03 # percentage of perimeter considered for polygon approximation
+        self.MIN_GRAY               = 0
+        self.MAX_GRAY               = 255
+        self.MIN_RATIO              = 0.65
+        self.MAX_RATIO              = 1.15
+        self.MIN_AREA               = 250     # min observable good area = 400 (from 30m)
+        self.MAX_AREA               = 70000   # 55000
+        self.MIN_POLYGON_SIDES      = 4
+        self.MAX_POLYGON_SIDES      = 4
+        self.show_only_biggest      = True
+        self.shouldFilter           = True
+        self.shouldSortByArea       = True
+        self.isClosedContour        = True
+        self.PERCENTAGE_PERIMETER   =  0.03 # percentage of perimeter considered for polygon approximation
 
         self.old_x_center, self.old_y_center = 0,0
         self.alpha = 0.99 # weight to avoid center point moving too fast
@@ -104,10 +100,6 @@ class Test:
 
         # calculating number of sides in polygon
         sides = len(approx)
-
-        # calculating ratio between width and height
-        # x, y, w, h = cv2.boundingRect(contour)
-        # ratio = round(float(w)/h,3)
         
         ratio = self.getContourRatio(contour) # always gets W and H in a way the ratio <= 1.0
 
@@ -142,19 +134,22 @@ class Test:
     def onHminTrackbar(self, value):
         self.minH = value
         self.runPipeline()
+
     def onSminTrackbar(self, value):
         self.minS = value
         self.runPipeline()
+
     def onVminTrackbar(self, value):
         self.minV = value
         self.runPipeline()
-    
     def onHmaxTrackbar(self, value):
         self.maxH = value
         self.runPipeline()
+
     def onSmaxTrackbar(self, value):
         self.maxS = value
         self.runPipeline()
+
     def onVmaxTrackbar(self, value):
         self.maxV = value
         self.runPipeline()
@@ -171,15 +166,15 @@ class Test:
         hsv     = cv2.bitwise_and(hsv, hsv, mask=hsv_mask)
 
         # grayscale
-        #hsv = cv2.cvtColor(hsv , cv2.COLOR_HSV2BGR)
-        #gray = cv2.cvtColor(hsv, cv2.COLOR_BGR2GRAY)
+        hsv = cv2.cvtColor(hsv , cv2.COLOR_HSV2BGR)
+        gray = cv2.cvtColor(hsv, cv2.COLOR_BGR2GRAY)
 
         # using thresholding
-        #ret,thresh = cv2.threshold(gray,self.MIN_GRAY, self.MAX_GRAY,cv2.THRESH_BINARY)
+        ret,thresh = cv2.threshold(gray,self.MIN_GRAY, self.MAX_GRAY,cv2.THRESH_BINARY)
 
         # erode
         kernel = np.ones((5, 5), np.uint8)
-        thresh = cv2.erode(hsv, kernel)
+        thresh = cv2.erode(thresh, kernel)
         #thresh = cv2.erode(thresh, kernel)
         #thresh = cv2.dilate(thresh, kernel)
 
@@ -226,7 +221,6 @@ class Test:
                 x_center = x_center + x_avg
                 y_center = y_center + y_avg
                 center_count = center_count + 1
-
                 
                 # draw
                 # coordinate for writing text on self.img
@@ -247,12 +241,12 @@ class Test:
                     break
 
 
-        cv2.imshow(self.imgWindowName       , self.originalImg)
-        cv2.imshow("hsv_filtered"           , hsv)
-        cv2.imshow(self.hsvWindowName       , hsv_mask)
-        cv2.imshow(self.threshWindowName    , thresh)
-        cv2.imshow(self.cannyWindowName     , canny)
-        cv2.imshow(self.resultWindowName    , self.img)
+        # cv2.imshow(self.imgWindowName           , self.originalImg  )
+        cv2.imshow(self.hsvFilteredWindowName   , hsv               )
+        cv2.imshow(self.hsvMaskWindowName       , hsv_mask          )
+        cv2.imshow(self.threshWindowName        , thresh            )
+        cv2.imshow(self.cannyWindowName         , canny             )
+        cv2.imshow(self.resultWindowName        , self.img          )
 
 
     def loadImg(self):
@@ -272,46 +266,47 @@ class Test:
 
     def createTrackbars(self):
         # create trackbars
-        cv2.createTrackbar( "minGray", self.threshWindowName ,    self.MIN_GRAY  ,       255         , self.onMinGrayTrackbar)
-        cv2.createTrackbar( "maxGray", self.threshWindowName ,    self.MAX_GRAY  ,       255         , self.onMaxGrayTrackbar)
-        cv2.createTrackbar( "minVal" , self.cannyWindowName  , self.canny_minVal ,       300         , self.onCannyMinValTrackbar)
-        cv2.createTrackbar( "maxVal" , self.cannyWindowName  , self.canny_maxVal ,       600         , self.onCannyMaxValTrackbar)
-        
-        cv2.createTrackbar( "minH" ,    self.hsvWindowName  ,     self.minH      ,       255         , self.onHminTrackbar)
-        cv2.createTrackbar( "maxH" ,    self.hsvWindowName  ,     self.maxH      ,       255         , self.onHmaxTrackbar)
-
-        cv2.createTrackbar( "minS" ,    self.hsvWindowName  ,     self.minS      ,       255         , self.onSminTrackbar)
-        cv2.createTrackbar( "maxS" ,    self.hsvWindowName  ,     self.maxS      ,       255         , self.onSmaxTrackbar)
-
-        cv2.createTrackbar( "minV" ,    self.hsvWindowName  ,     self.minV      ,       255         , self.onVminTrackbar)        
-        cv2.createTrackbar( "maxV" ,    self.hsvWindowName  ,     self.maxV      ,       255         , self.onVmaxTrackbar)
+        cv2.createTrackbar( "minGray", self.threshWindowName    ,    self.MIN_GRAY  ,   255 , self.onMinGrayTrackbar    )
+        cv2.createTrackbar( "maxGray", self.threshWindowName    ,    self.MAX_GRAY  ,   255 , self.onMaxGrayTrackbar    )
+        cv2.createTrackbar( "minVal" , self.cannyWindowName     , self.canny_minVal ,   300 , self.onCannyMinValTrackbar)
+        cv2.createTrackbar( "maxVal" , self.cannyWindowName     , self.canny_maxVal ,   600 , self.onCannyMaxValTrackbar)
+        cv2.createTrackbar( "minH" ,    self.hsvMaskWindowName  ,     self.minH     ,   255 , self.onHminTrackbar       )
+        cv2.createTrackbar( "maxH" ,    self.hsvMaskWindowName  ,     self.maxH     ,   255 , self.onHmaxTrackbar       )
+        cv2.createTrackbar( "minS" ,    self.hsvMaskWindowName  ,     self.minS     ,   255 , self.onSminTrackbar       )
+        cv2.createTrackbar( "maxS" ,    self.hsvMaskWindowName  ,     self.maxS     ,   255 , self.onSmaxTrackbar       )
+        cv2.createTrackbar( "minV" ,    self.hsvMaskWindowName  ,     self.minV     ,   255 , self.onVminTrackbar       )         
+        cv2.createTrackbar( "maxV" ,    self.hsvMaskWindowName  ,     self.maxV     ,   255 , self.onVmaxTrackbar       )
     
     def moveWindow(self, windowName, windowPos):
         print("moving {} to ({},{})".format(windowName, windowPos[0],windowPos[1]))
         cv2.moveWindow(windowName, windowPos[0], windowPos[1])
     
     def moveWindows(self):
-        self.moveWindow(self.imgWindowName   ,self.imgWindowPos)
-        self.moveWindow(self.hsvWindowName   ,self.hsvWindowPos)
-        self.moveWindow(self.threshWindowName,self.threshWindowPos)
-        self.moveWindow(self.cannyWindowName ,self.cannyWindowPos)
-        self.moveWindow(self.resultWindowName,self.resultWindowPos)
+        # self.moveWindow(self.imgWindowName        ,self.imgWindowPos          )
+        self.moveWindow(self.hsvFilteredWindowName  ,self.hsvFilteredWindowPos  )
+        self.moveWindow(self.hsvMaskWindowName      ,self.hsvMaskWindowPos      )
+        self.moveWindow(self.threshWindowName       ,self.threshWindowPos       )
+        self.moveWindow(self.cannyWindowName        ,self.cannyWindowPos        )
+        self.moveWindow(self.resultWindowName       ,self.resultWindowPos       )
 
 
 if __name__ == '__main__':
 
-    t = Test()
-    t.start()
-    t.createTrackbars()
-    t.moveWindows()
+    picker = HSVColoPicker()
+    picker.start()
+    picker.createTrackbars()
+    picker.moveWindows()
+
+    print("Press D to go to next image, A to go to previous image.")
+    print("Change any values in the HSV min and max ranges to suit your needs.")
 
     pressed = None
     while ( pressed != ord('q') ):
         pressed = cv2.waitKey(0)
         if (pressed == ord('d')):
-            t.nextImage()
+            picker.nextImage()
         elif (pressed == ord('a')):
-            t.previousImage()
+            picker.previousImage()
     
     cv2.destroyAllWindows()
     exit()
