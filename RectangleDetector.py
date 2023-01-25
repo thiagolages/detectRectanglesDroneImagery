@@ -139,7 +139,6 @@ class RectangleDetector:
             count = count + 1
             
             area, sides, ratio, approx = self.getAreaSidesRatioApprox(contour)
-            self.update(area, sides, ratio, approx)
 
             # since we already found the biggest area and it fits the criteria, we'll exit after this
             if self.show_only_biggest:
